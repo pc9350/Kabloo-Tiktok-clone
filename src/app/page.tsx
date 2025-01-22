@@ -1,5 +1,23 @@
 import Image from "next/image";
 
+const questions = [
+  {
+    id: 1,
+    question: "What type of content do you enjoy most?",
+    options: ["Comedy", "Education", "Lifestyle", "Gaming", "Music"]
+  },
+  {
+    id: 2,
+    question: "How much time do you typically spend watching short videos?",
+    options: ["< 30 mins", "30-60 mins", "1-2 hours", "> 2 hours"]
+  },
+  {
+    id: 3,
+    question: "What's your primary purpose for using this app?",
+    options: ["Entertainment", "Learning", "Creating Content", "Social Connection"]
+  }
+];
+
 export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
