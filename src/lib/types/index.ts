@@ -23,3 +23,11 @@ export interface Video {
   comments: number;
   shares: number;
 }
+
+export type VideoWithCreator = Video & {
+    creator: User;
+    _count: {
+      likes: number;
+      comments: number;
+    };
+  };

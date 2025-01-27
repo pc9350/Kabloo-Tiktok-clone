@@ -1,11 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FaPlay, FaComment } from "react-icons/fa";
-import { FcLike, FcShare } from "react-icons/fc";
+import { FaPlay } from "react-icons/fa";
 import { CommentsSection } from "./CommentsSection";
 import { VideoInteractions } from "./VideoInteractions";
-import { VideoComment } from "@/lib/types";
 
 interface VideoCardProps {
   id: string;
@@ -16,7 +14,7 @@ interface VideoCardProps {
     avatar: string;
   };
   likes: number;
-  comments: VideoComment[];
+  comments: number;
 }
 
 export function VideoCard({ id, url, caption, creator, likes, comments }: VideoCardProps) {
@@ -59,7 +57,6 @@ export function VideoCard({ id, url, caption, creator, likes, comments }: VideoC
       {showComments && (
         <CommentsSection
           videoId={id}
-          comments={comments}
           onClose={() => setShowComments(false)}
         />
       )}

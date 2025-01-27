@@ -2,36 +2,32 @@
 
 import { useState } from 'react';
 import { VideoCard } from './VideoCard';
+import type { Video, User, VideoWithCreator } from '@/lib/types';
 
-const DUMMY_VIDEOS = [
-  {
-    id: '1',
-    url: '/videos/Sample_video_1.mp4',
-    caption: 'Moon throughout the day!',
-    creator: {
-      username: 'user1',
-      avatar: '/user.png'
-    }
-  },
-  {
-    id: '2',
-    url: '/videos/Sample_video_2.mp4',
-    caption: 'Turtle in the water!!',
-    creator: {
-      username: 'user2',
-      avatar: '/user.png'
-    }
-  },
-  // Add more dummy videos
-];
 
-export function VideoFeed() {
-  const [currentIndex, setCurrentIndex] = useState(0);
+
+interface VideoFeedProps {
+  initialVideos: VideoWithCreator[];
+}
+
+export function VideoFeed({ initialVideos }: VideoFeedProps) {
+  const [videos] = useState(initialVideos);
 
   return (
     <div className="snap-y snap-mandatory h-screen w-full overflow-y-scroll">
-      {DUMMY_VIDEOS.map((video) => (
-        <VideoCard key={video.id} {...video} likes={0} comments={[]} />
+      {videos.map((video) => (
+        <VideoCard 
+          key={video.id}
+          id={video.id}
+          url={video.url}
+          caption={video.caption || ''}
+          creator={{
+            username: video.creator.username,
+            avatar: video.creator.avatar
+          }}
+          likes={video._count.likes}
+          comments={video._count.comments}
+        />
       ))}
     </div>
   );
