@@ -13,8 +13,11 @@ const nextConfig: NextConfig = {
         fullySpecified: false,
       },
     });
-
-    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      topLevelAwait: true,
+    };
 
     return config;
   },
@@ -22,8 +25,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '10mb'
     },
-    optimizeCss: true,
-    scrollRestoration: true,
   },
 
   images: {
@@ -55,7 +56,15 @@ const nextConfig: NextConfig = {
           {
             key: "Accept-Ranges",
             value: "bytes"
-          }
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "*", // Enable CORS (adjust to specific domains if needed)
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Range", // Allow headers required for range requests
+          },
         ],
       },
     ];

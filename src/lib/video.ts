@@ -25,15 +25,11 @@ export const getVideoDuration = async (file: File): Promise<number> => {
     });
   
     try {
-      console.log('Loading FFmpeg...');
       await ffmpeg.load();
-      console.log('FFmpeg loaded successfully');
   
-      console.log('Writing input file...');
       ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
       console.log('Original file size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
   
-      console.log('Starting compression...');
       await ffmpeg.run(
         '-i', 'input.mp4',
         '-c:v', 'libx264',
@@ -43,7 +39,6 @@ export const getVideoDuration = async (file: File): Promise<number> => {
         'output.mp4'
       );
   
-      console.log('Reading compressed file...');
       const data = ffmpeg.FS('readFile', 'output.mp4');
       const compressedBlob = new Blob([data.buffer], { type: 'video/mp4' });
       console.log('Compressed file size:', (compressedBlob.size / 1024 / 1024).toFixed(2), 'MB');
