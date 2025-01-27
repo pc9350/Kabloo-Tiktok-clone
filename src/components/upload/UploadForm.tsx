@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-// import { useUser } from "@clerk/nextjs";
 import { UploadDropzone } from "@/lib/uploadthing";
+import { getVideoDuration } from "@/lib/video";
 
 export default function UploadForm() {
   const [caption, setCaption] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  // const { user } = useUser();
-
-  // if (!user) return null;
 
   return (
     <div className="container mx-auto p-4 max-w-xl">
@@ -20,7 +18,29 @@ export default function UploadForm() {
           <label className="block mb-2 font-medium">Upload Video</label>
           <UploadDropzone
             endpoint="videoUploader"
-            onClientUploadComplete={(res: any) => {
+            config={{ mode: "auto" }}
+            content={{
+              label: "Drop your video here or click to browse",
+              allowedContent: "Videos up to 15 seconds, max 64MB",
+            }}
+            onBeforeUploadBegin={async (files) => {
+              try {
+                const duration = await getVideoDuration(files[0]);
+                if (duration > 15) {
+                  // setError("Video must be 15 seconds or less");
+                  alert("Video duration too long, should be 15 seconds or less.")
+                  throw new Error("Video too long");
+                }
+                setError(null);
+                return files;
+              } catch (error: unknown) {
+                if (error instanceof Error && error.message !== "Video too long") {
+                  setError("Error checking video duration");
+                }
+                throw error;
+              }
+            }}
+            onClientUploadComplete={(res) => {
               if (res && res[0]) {
                 fetch('/api/videos', {
                   method: 'POST',
@@ -38,7 +58,7 @@ export default function UploadForm() {
               }
             }}
             onUploadError={(error: Error) => {
-              alert(`ERROR! ${error.message}`);
+              setError(`Upload failed: ${error.message}`);
             }}
           />
         </div>
