@@ -22,6 +22,7 @@ export function VideoFeed({ initialVideos }: VideoFeedProps) {
           url={video.url}
           caption={video.caption || ''}
           creator={{
+            id: video.creator.id,
             username: video.creator.username,
             avatar: video.creator.avatar
           }}

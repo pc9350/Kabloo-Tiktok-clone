@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.10.0",
+    "@ffmpeg/core": "^0.8.5",
+    "@ffmpeg/ffmpeg": "^0.9.7",
     "@prisma/client": "^6.2.1",
     "@uploadthing/react": "^7.1.5",
     "next": "15.1.6",
