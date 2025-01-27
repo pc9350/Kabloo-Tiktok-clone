@@ -34,6 +34,7 @@ export function VideoCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
   const { user } = useUser();
 
@@ -176,9 +177,8 @@ export function VideoCard({
         onClick={togglePlay}
         onLoadedData={handleLoadedData}
         preload="auto"
-      >
-      <source src={url} type="video/mp4" />
-      </video>
+      />
+
 
       <VideoInteractions
         videoId={id}

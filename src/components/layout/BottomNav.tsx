@@ -6,9 +6,15 @@ import { HiHome } from 'react-icons/hi';
 import { BiUpload } from 'react-icons/bi';
 import { FaUser } from 'react-icons/fa';
 import { ProfileMenu } from './ProfileMenu';
+import { useAuth } from '@clerk/nextjs';
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { isSignedIn } = useAuth();
+
+  if (!isSignedIn) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 w-full bg-black border-t border-gray-800 py-3">
