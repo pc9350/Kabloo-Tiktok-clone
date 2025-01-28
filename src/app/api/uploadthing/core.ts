@@ -2,6 +2,7 @@ import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getVideoDuration } from "@/lib/video";
 
 const f = createUploadthing();
 
@@ -16,6 +17,11 @@ export const ourFileRouter = {
       if (!userId) {
         throw new UploadThingError("Unauthorized: No userId");
       }
+
+    //   const duration = await getVideoDuration(file);
+    //   if (duration > 15) {
+    //     throw new UploadThingError("Video must be 15 seconds or less");
+    //   }
 
       // Verify user exists in database
       const user = await prisma.user.findUnique({
