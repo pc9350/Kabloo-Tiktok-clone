@@ -33,9 +33,10 @@ export const getVideoDuration = async (file: File): Promise<number> => {
       await ffmpeg.run(
         '-i', 'input.mp4',
         '-c:v', 'libx264',
-        '-preset', 'ultrafast',  // Fastest encoding
-        '-crf', '28',           // Reasonable quality
-        '-c:a', 'copy',         // Copy audio without re-encoding
+        '-preset', 'veryfast', 
+        '-crf', '28',
+        '-c:a', 'aac',           
+        '-b:a', '128k', 
         'output.mp4'
       );
   

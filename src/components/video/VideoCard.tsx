@@ -38,54 +38,47 @@ export function VideoCard({
   const router = useRouter();
   const { user } = useUser();
 
-  // Preload video when component mounts
+  
   useEffect(() => {
-    const preloadVideo = async () => {
-      try {
-        if (videoRef.current) {
-          videoRef.current.load();
-        }
-      } catch (error) {
-        console.error("Error preloading video:", error);
-      }
-    };
+    const video = videoRef.current;
+    if (!video) return;
 
-    preloadVideo();
-  }, [url]);
-
-  // Handle intersection observer for lazy loading
-  useEffect(() => {
-    const options = {
-      root: null,
-      rootMargin: '100px',
-      threshold: 0.5,
-    };
+    // Reduce initial quality for faster loading
+    video.setAttribute('playsinline', '');
+    video.preload = "metadata";
 
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          if (videoRef.current) {
-            videoRef.current.play().catch(console.error);
-            setIsPlaying(true);
-          }
-        } else {
-          if (videoRef.current) {
-            videoRef.current.pause();
-            setIsPlaying(false);
-          }
+      const [entry] = entries;
+      
+      if (entry.isIntersecting) {
+        // Start loading the video when it's about to be visible
+        video.preload = "auto";
+        
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch((error: unknown) => {
+              if (error instanceof Error && error.name !== "AbortError") {
+                console.error("Video playback error:", error);
+              }
+            });
         }
-      });
-    }, options);
-
-    if (videoRef.current) {
-      observer.observe(videoRef.current);
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current);
+      } else {
+        video.pause();
+        setIsPlaying(false);
+        // Reduce memory usage when not visible
+        video.preload = "metadata";
       }
-    };
+    }, { 
+      threshold: 0.1,
+      rootMargin: '300px 0px' // Start loading slightly before the video is visible
+    });
+
+    observer.observe(video);
+    return () => observer.disconnect();
   }, []);
 
   const handleDelete = async () => {
@@ -119,13 +112,25 @@ export function VideoCard({
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(console.error);
+    if (!videoRef.current) return;
+
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      const playPromise = videoRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((error: unknown) => {
+            if (error instanceof Error && error.name !== "AbortError") {
+              console.error("Video playback error:", error);
+            }
+          });
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -176,9 +181,15 @@ export function VideoCard({
         ref={videoRef}
         onClick={togglePlay}
         onLoadedData={handleLoadedData}
-        preload="auto"
-      />
-
+        preload="metadata"
+        poster={`${url}?thumb=1`} // Add a poster image if available
+        style={{
+          willChange: 'transform',
+          transform: 'translateZ(0)'
+        }}
+      >
+        <source src={url} type="video/mp4" />
+      </video>
 
       <VideoInteractions
         videoId={id}
