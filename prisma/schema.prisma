@@ -23,6 +23,8 @@ model User {
   comments  Comment[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  followers Follow[] @relation("UserFollowers")
+  following Follow[] @relation("UserFollowing")
 }
 
 model Video {
@@ -57,4 +59,15 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id])
   likes     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model Follow {
+  id        String   @id @default(cuid())
+  followerId String  // User who is following
+  followingId String // User being followed
+  createdAt DateTime @default(now())
+  follower   User    @relation("UserFollowers", fields: [followerId], references: [id])
+  following  User    @relation("UserFollowing", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
 }

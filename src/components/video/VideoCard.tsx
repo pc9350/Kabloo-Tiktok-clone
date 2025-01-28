@@ -6,6 +6,7 @@ import { CommentsSection } from "./CommentsSection";
 import { VideoInteractions } from "./VideoInteractions";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { FollowButton } from "../user/FollowButton";
 
 interface VideoCardProps {
   id: string;
@@ -38,44 +39,46 @@ export function VideoCard({
   const router = useRouter();
   const { user } = useUser();
 
-  
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     // Reduce initial quality for faster loading
-    video.setAttribute('playsinline', '');
+    video.setAttribute("playsinline", "");
     video.preload = "metadata";
 
-    const observer = new IntersectionObserver((entries) => {
-      const [entry] = entries;
-      
-      if (entry.isIntersecting) {
-        // Start loading the video when it's about to be visible
-        video.preload = "auto";
-        
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsPlaying(true);
-            })
-            .catch((error: unknown) => {
-              if (error instanceof Error && error.name !== "AbortError") {
-                console.error("Video playback error:", error);
-              }
-            });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+
+        if (entry.isIntersecting) {
+          // Start loading the video when it's about to be visible
+          video.preload = "auto";
+
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                setIsPlaying(true);
+              })
+              .catch((error: unknown) => {
+                if (error instanceof Error && error.name !== "AbortError") {
+                  console.error("Video playback error:", error);
+                }
+              });
+          }
+        } else {
+          video.pause();
+          setIsPlaying(false);
+          // Reduce memory usage when not visible
+          video.preload = "metadata";
         }
-      } else {
-        video.pause();
-        setIsPlaying(false);
-        // Reduce memory usage when not visible
-        video.preload = "metadata";
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "300px 0px", // Start loading slightly before the video is visible
       }
-    }, { 
-      threshold: 0.1,
-      rootMargin: '300px 0px' // Start loading slightly before the video is visible
-    });
+    );
 
     observer.observe(video);
     return () => observer.disconnect();
@@ -143,7 +146,7 @@ export function VideoCard({
   };
 
   return (
-    <div className="relative h-screen w-full snap-start bg-black">
+    <div className="relative h-[calc(100vh-45px)] w-full snap-start bg-black">
       {error && (
         <div className="absolute top-4 left-4 right-4 p-2 bg-red-500 text-white rounded text-sm text-center">
           {error}
@@ -156,16 +159,21 @@ export function VideoCard({
         </div>
       )}
 
-      {user?.id === creator.id && ( // Make sure to use clerkId here
+      {user?.id === creator.id && (
         <button
           onClick={handleDelete}
           disabled={isDeleting}
-          className={`absolute top-4 right-4 p-2 rounded-full text-white 
-            ${isDeleting ? "bg-gray-500" : "bg-red-500 hover:bg-red-600"}
-            disabled:opacity-50 transition-all z-10`}
+          className={`p-2 rounded-full absolute top-4 right-4 ${
+            isDeleting ? "bg-gray-500" : "bg-red-500 hover:bg-red-600"
+          } transition-colors`}
           title="Delete video"
+          type="button"
         >
-          <FaTrash className={`w-5 h-5 ${isDeleting ? "animate-pulse" : ""}`} />
+          <FaTrash
+            className={`w-5 h-5 text-white ${
+              isDeleting ? "animate-pulse" : ""
+            }`}
+          />
         </button>
       )}
 
@@ -184,23 +192,43 @@ export function VideoCard({
         preload="metadata"
         poster={`${url}?thumb=1`} // Add a poster image if available
         style={{
-          willChange: 'transform',
-          transform: 'translateZ(0)'
+          willChange: "transform",
+          transform: "translateZ(0)",
         }}
       >
         <source src={url} type="video/mp4" />
       </video>
 
-      <VideoInteractions
-        videoId={id}
-        initialLikes={likes}
-        initialComments={comments}
-        onCommentClick={() => setShowComments(true)}
-      />
+      {/* Bottom overlay with user info and interactions */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 mb-5">
+            <img
+              src={creator.avatar}
+              alt={creator.username}
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <p className="text-white font-bold">{creator.username}</p>
+              <p className="text-white text-sm">{caption}</p>
+            </div>
+            <FollowButton
+              targetUserId={creator.id}
+              initialIsFollowing={false}
+            />
+          </div>
 
-      {showComments && (
-        <CommentsSection videoId={id} onClose={() => setShowComments(false)} />
-      )}
+          {/* Right side interactions */}
+          <div className="flex flex-col items-center">
+            <VideoInteractions
+              videoId={id}
+              initialLikes={likes}
+              initialComments={comments}
+              onCommentClick={() => setShowComments(true)}
+            />
+          </div>
+        </div>
+      </div>
 
       {!isPlaying && isLoaded && (
         <div
@@ -213,19 +241,9 @@ export function VideoCard({
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-        <div className="flex flex-col gap-2 items-start">
-          <div className="flex flex-row gap-2 items-center">
-            <img
-              src={creator.avatar}
-              alt={creator.username}
-              className="w-10 h-10 rounded-full"
-            />
-            <p className="text-white font-bold">{creator.username}</p>
-          </div>
-          <p className="text-white text-sm px-2">{caption}</p>
-        </div>
-      </div>
+      {showComments && (
+        <CommentsSection videoId={id} onClose={() => setShowComments(false)} />
+      )}
     </div>
   );
 }

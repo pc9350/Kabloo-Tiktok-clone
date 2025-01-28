@@ -1,8 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { VideoFeed } from "@/components/video/VideoFeed";
 import { Suspense } from "react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export default async function FeedPage() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   const videos = await prisma.video.findMany({
     include: {
       creator: true,
@@ -14,7 +22,7 @@ export default async function FeedPage() {
       },
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: 'desc',
     },
   });
 

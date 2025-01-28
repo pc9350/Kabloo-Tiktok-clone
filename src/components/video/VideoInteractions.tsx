@@ -60,7 +60,7 @@ export function VideoInteractions({ videoId, initialLikes, initialComments }: Vi
 
   return (
     <>
-    <div className="absolute right-4 bottom-20 flex flex-col gap-4">
+    <div className="absolute right-4 bottom-12 flex flex-col gap-4">
       <button 
         onClick={handleLike}
         disabled={!isLoaded || isLiking || !user}
