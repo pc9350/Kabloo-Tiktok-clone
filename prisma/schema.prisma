@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id        String    @id 
+  id        String    @id
   clerkId   String    @unique
   username  String    @unique
   avatar    String

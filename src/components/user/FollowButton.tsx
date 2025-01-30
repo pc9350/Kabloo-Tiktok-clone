@@ -1,17 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 
 interface FollowButtonProps {
   targetUserId: string;
+  targetClerkId: string; 
   initialIsFollowing: boolean;
+  onFollowUpdate?: (isFollowing: boolean) => void;
 }
 
-export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonProps) {
+export function FollowButton({ targetUserId, targetClerkId, initialIsFollowing, onFollowUpdate }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUser();
+
+  useEffect(() => {
+    setIsFollowing(initialIsFollowing);
+  }, [initialIsFollowing, targetUserId]);
 
   const handleFollow = async () => {
     if (!user || user.id === targetUserId) return;
@@ -27,6 +33,7 @@ export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonP
       if (response.ok) {
         const data = await response.json();
         setIsFollowing(data.followed);
+        onFollowUpdate?.(data.followed);
       }
     } catch (error) {
       console.error('Follow error:', error);
@@ -35,7 +42,7 @@ export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonP
     }
   };
 
-  if (user?.id === targetUserId) return null;
+  if (user?.id === targetClerkId) return null;
 
   return (
     <button
@@ -46,6 +53,7 @@ export function FollowButton({ targetUserId, initialIsFollowing }: FollowButtonP
           ? 'bg-gray-200 text-black hover:bg-red-100 hover:text-red-500'
           : 'bg-blue-500 text-white hover:bg-blue-600'
       } transition-colors disabled:opacity-50`}
+      type="button"
     >
       {isLoading ? 'Loading...' : isFollowing ? 'Following' : 'Follow'}
     </button>

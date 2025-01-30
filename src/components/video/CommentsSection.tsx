@@ -8,6 +8,7 @@ interface CommentsSectionProps {
   videoId: string;
 //   comments: number;
   onClose: () => void;
+  onCommentAdded: () => void;
 }
 
 interface Comment {
@@ -20,7 +21,7 @@ interface Comment {
     createdAt: string;
   }
 
-export function CommentsSection({ videoId, onClose }: CommentsSectionProps) {
+export function CommentsSection({ videoId, onClose, onCommentAdded }: CommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -58,30 +59,12 @@ export function CommentsSection({ videoId, onClose }: CommentsSectionProps) {
           const comment = await response.json();
           setComments(prev => [comment, ...prev]);
           setNewComment('');
+          onCommentAdded?.();
         }
       } catch (error) {
         console.error('Failed to post comment:', error);
       }
     };
-
-    // const comment: VideoComment = {
-    //   id: Date.now().toString(),
-    //   text: newComment,
-    //   user: {
-    //     id: 'current-user',
-    //     username: 'You',
-    //     avatar: '/avatars/default.png',
-    //     followers: 0,
-    //     following: 0
-    //   },
-    //   createdAt: new Date(),
-    //   likes: 0
-    // };
-
-//     setComments(prev => [comment, ...prev]);
-//     setNewComment('');
-//     // TODO: Send to API
-//   };
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-end">

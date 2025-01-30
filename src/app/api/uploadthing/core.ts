@@ -3,6 +3,7 @@ import { UploadThingError } from "uploadthing/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getVideoDuration } from "@/lib/video";
+import { nanoid } from "nanoid";
 
 const f = createUploadthing();
 
@@ -32,7 +33,7 @@ export const ourFileRouter = {
         // Create user in your database
         user = await prisma.user.create({
           data: {
-            id: userId,
+            id: nanoid(),
             clerkId: userId,
             username: clerkUser.username || `user_${userId.slice(0, 8)}`,
             avatar: clerkUser.imageUrl || 'https://api.dicebear.com/7.x/avatars/svg?seed=' + userId,

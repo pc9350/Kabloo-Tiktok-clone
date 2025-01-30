@@ -14,12 +14,11 @@ interface VideoFeedProps {
 export function VideoFeed({ initialVideos }: VideoFeedProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
-  const [videos] = useState(initialVideos);
+  const [videos, setVideos] = useState(initialVideos);
 
   useEffect(() => {
-    setIsClient(true); // Ensure the component is fully mounted before initializing virtualizer
+    setIsClient(true);
   }, []);
-
 
   const virtualizer = useVirtualizer({
     count: videos.length,
@@ -35,6 +34,22 @@ export function VideoFeed({ initialVideos }: VideoFeedProps) {
       </div>
     );
   }
+
+  const handleFollowUpdate = (creatorId: string, isFollowing: boolean) => {
+    setVideos(prevVideos => 
+      prevVideos.map(video => 
+        video.creator.id === creatorId 
+          ? {
+              ...video,
+              creator: {
+                ...video.creator,
+                isFollowing
+              }
+            }
+          : video
+      )
+    );
+  };
   
   return (
     <div 
@@ -68,11 +83,13 @@ export function VideoFeed({ initialVideos }: VideoFeedProps) {
                 caption={video.caption || ''}
                 creator={{
                   id: video.creator.id,
+                  clerkId: video.creator.clerkId,
                   username: video.creator.username,
                   avatar: video.creator.avatar
                 }}
                 likes={video._count.likes}
                 comments={video._count.comments}
+                onFollowUpdate={handleFollowUpdate}
               />
             </div>
           );

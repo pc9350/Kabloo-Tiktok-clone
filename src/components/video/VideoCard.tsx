@@ -7,6 +7,7 @@ import { VideoInteractions } from "./VideoInteractions";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { FollowButton } from "../user/FollowButton";
+import Link from "next/link";
 
 interface VideoCardProps {
   id: string;
@@ -14,11 +15,13 @@ interface VideoCardProps {
   caption: string;
   creator: {
     id: string;
+    clerkId: string;
     username: string;
     avatar: string;
   };
   likes: number;
   comments: number;
+  onFollowUpdate?: (creatorId: string, isFollowing: boolean) => void;
 }
 
 export function VideoCard({
@@ -28,10 +31,12 @@ export function VideoCard({
   creator,
   likes,
   comments,
+  onFollowUpdate,
 }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(comments);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -145,6 +150,10 @@ export function VideoCard({
     }
   };
 
+  const handleCommentAdded = () => {
+    setCommentCount(prev => prev + 1);
+  };
+
   return (
     <div className="relative h-[calc(100vh-45px)] w-full snap-start bg-black">
       {error && (
@@ -202,7 +211,11 @@ export function VideoCard({
       {/* Bottom overlay with user info and interactions */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 mb-5">
+          {/* <div className="flex items-center space-x-3 mb-5"> */}
+          <Link
+            href={`/main/profile/${creator.id}`}
+            className="flex items-center space-x-3 mb-5 hover:opacity-80 transition-opacity"
+          >
             <img
               src={creator.avatar}
               alt={creator.username}
@@ -212,11 +225,14 @@ export function VideoCard({
               <p className="text-white font-bold">{creator.username}</p>
               <p className="text-white text-sm">{caption}</p>
             </div>
-            <FollowButton
+
+            {/* <FollowButton
               targetUserId={creator.id}
+              targetClerkId={creator.clerkId}
               initialIsFollowing={false}
-            />
-          </div>
+              onFollowUpdate={(isFollowing) => onFollowUpdate?.(creator.id, isFollowing)}
+            /> */}
+          </Link>
 
           {/* Right side interactions */}
           <div className="flex flex-col items-center">
@@ -242,7 +258,11 @@ export function VideoCard({
       )}
 
       {showComments && (
-        <CommentsSection videoId={id} onClose={() => setShowComments(false)} />
+        <CommentsSection
+          videoId={id}
+          onClose={() => setShowComments(false)}
+          onCommentAdded={handleCommentAdded}
+        />
       )}
     </div>
   );

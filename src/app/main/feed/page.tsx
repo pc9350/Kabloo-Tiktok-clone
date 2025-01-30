@@ -8,12 +8,38 @@ export default async function FeedPage() {
   const { userId } = await auth();
 
   if (!userId) {
-    redirect("/sign-in");
+    redirect("/");
   }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+  });
+
+  if (!currentUser) redirect("/");
+
+  // const follows = await prisma.follow.findMany({
+  //   where: {
+  //     followerId: currentUser?.id
+  //   }
+  // });
+
+  // console.log("Current follows:", follows); // Debug log
+  // console.log("Current user ID:", currentUser?.id);
+
+  // const followingIds = follows.map((f) => f.followingId);
+  // console.log("Following IDs:", followingIds);
 
   const videos = await prisma.video.findMany({
     include: {
-      creator: true,
+      creator: {
+        include: {
+          followers: {
+            where: {
+              followerId: currentUser?.id
+            }
+          }
+        }
+      },
       _count: {
         select: {
           likes: true,
@@ -26,6 +52,21 @@ export default async function FeedPage() {
     },
   });
 
+  console.log('Debug - First video:', {
+    creatorId: videos[0]?.creator.id,
+    followers: videos[0]?.creator.followers,
+    currentUserId: currentUser?.id
+  });
+
+  const videosWithFollowStatus = videos.map(video => ({
+    ...video,
+    creator: {
+      ...video.creator,
+      isFollowing: video.creator.followers.length > 0,
+      followers: undefined
+    }
+  }));
+
   return (
     <main className="h-screen w-full bg-black">
       <Suspense
@@ -35,7 +76,7 @@ export default async function FeedPage() {
           </div>
         }
       >
-        <VideoFeed initialVideos={videos} />
+        <VideoFeed initialVideos={videosWithFollowStatus} />
       </Suspense>
     </main>
   );
