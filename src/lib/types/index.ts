@@ -24,10 +24,23 @@ export interface Video {
   shares: number;
 }
 
-export type VideoWithCreator = Video & {
-    creator: User;
-    _count: {
-      likes: number;
-      comments: number;
-    };
+export interface VideoWithCreator {
+  id: string;
+  url: string;
+  caption: string;
+  createdAt: Date;
+  updatedAt: Date;
+  creatorId: string;
+  creator: {
+    id: string;
+    clerkId: string;
+    username: string;
+    avatar: string;
+    createdAt: Date;
+    updatedAt: Date;
   };
+  _count: {
+    likes: number;
+    comments: number;
+  };
+}

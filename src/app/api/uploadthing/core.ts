@@ -1,8 +1,9 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getVideoDuration } from "@/lib/video";
+import { nanoid } from "nanoid";
 
 const f = createUploadthing();
 
@@ -18,21 +19,29 @@ export const ourFileRouter = {
         throw new UploadThingError("Unauthorized: No userId");
       }
 
-    //   const duration = await getVideoDuration(file);
-    //   if (duration > 15) {
-    //     throw new UploadThingError("Video must be 15 seconds or less");
-    //   }
-
-      // Verify user exists in database
-      const user = await prisma.user.findUnique({
-        where: { clerkId: userId },
+      let user = await prisma.user.findUnique({
+        where: { clerkId: userId || "" },
       });
-      console.log("Database user:", user);
 
       if (!user) {
-        throw new UploadThingError("User not found in database");
+        // Get user data from Clerk
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(userId);
+
+        console.log("Clerk user:", clerkUser);
+        
+        // Create user in your database
+        user = await prisma.user.create({
+          data: {
+            id: nanoid(),
+            clerkId: userId,
+            username: clerkUser.username || `user_${userId.slice(0, 8)}`,
+            avatar: clerkUser.imageUrl || 'https://api.dicebear.com/7.x/avatars/svg?seed=' + userId,
+          },
+        });
       }
 
+      console.log("Database user:", user);
       return { userId: user.id };
     } catch (err) {
       console.error("Middleware error:", err);

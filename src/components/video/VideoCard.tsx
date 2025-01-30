@@ -6,6 +6,8 @@ import { CommentsSection } from "./CommentsSection";
 import { VideoInteractions } from "./VideoInteractions";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { FollowButton } from "../user/FollowButton";
+import Link from "next/link";
 
 interface VideoCardProps {
   id: string;
@@ -13,11 +15,13 @@ interface VideoCardProps {
   caption: string;
   creator: {
     id: string;
+    clerkId: string;
     username: string;
     avatar: string;
   };
   likes: number;
   comments: number;
+  onFollowUpdate?: (creatorId: string, isFollowing: boolean) => void;
 }
 
 export function VideoCard({
@@ -27,10 +31,12 @@ export function VideoCard({
   creator,
   likes,
   comments,
+  onFollowUpdate,
 }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(comments);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -38,54 +44,49 @@ export function VideoCard({
   const router = useRouter();
   const { user } = useUser();
 
-  // Preload video when component mounts
   useEffect(() => {
-    const preloadVideo = async () => {
-      try {
-        if (videoRef.current) {
-          videoRef.current.load();
-        }
-      } catch (error) {
-        console.error("Error preloading video:", error);
-      }
-    };
+    const video = videoRef.current;
+    if (!video) return;
 
-    preloadVideo();
-  }, [url]);
+    // Reduce initial quality for faster loading
+    video.setAttribute("playsinline", "");
+    video.preload = "metadata";
 
-  // Handle intersection observer for lazy loading
-  useEffect(() => {
-    const options = {
-      root: null,
-      rootMargin: '100px',
-      threshold: 0.5,
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          if (videoRef.current) {
-            videoRef.current.play().catch(console.error);
-            setIsPlaying(true);
+          // Start loading the video when it's about to be visible
+          video.preload = "auto";
+
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                setIsPlaying(true);
+              })
+              .catch((error: unknown) => {
+                if (error instanceof Error && error.name !== "AbortError") {
+                  console.error("Video playback error:", error);
+                }
+              });
           }
         } else {
-          if (videoRef.current) {
-            videoRef.current.pause();
-            setIsPlaying(false);
-          }
+          video.pause();
+          setIsPlaying(false);
+          // Reduce memory usage when not visible
+          video.preload = "metadata";
         }
-      });
-    }, options);
-
-    if (videoRef.current) {
-      observer.observe(videoRef.current);
-    }
-
-    return () => {
-      if (videoRef.current) {
-        observer.unobserve(videoRef.current);
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "300px 0px", // Start loading slightly before the video is visible
       }
-    };
+    );
+
+    observer.observe(video);
+    return () => observer.disconnect();
   }, []);
 
   const handleDelete = async () => {
@@ -119,13 +120,25 @@ export function VideoCard({
   };
 
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play().catch(console.error);
+    if (!videoRef.current) return;
+
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      const playPromise = videoRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((error: unknown) => {
+            if (error instanceof Error && error.name !== "AbortError") {
+              console.error("Video playback error:", error);
+            }
+          });
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -137,8 +150,12 @@ export function VideoCard({
     }
   };
 
+  const handleCommentAdded = () => {
+    setCommentCount(prev => prev + 1);
+  };
+
   return (
-    <div className="relative h-screen w-full snap-start bg-black">
+    <div className="relative h-[calc(100vh-45px)] w-full snap-start bg-black">
       {error && (
         <div className="absolute top-4 left-4 right-4 p-2 bg-red-500 text-white rounded text-sm text-center">
           {error}
@@ -151,16 +168,21 @@ export function VideoCard({
         </div>
       )}
 
-      {user?.id === creator.id && ( // Make sure to use clerkId here
+      {user?.id === creator.id && (
         <button
           onClick={handleDelete}
           disabled={isDeleting}
-          className={`absolute top-4 right-4 p-2 rounded-full text-white 
-            ${isDeleting ? "bg-gray-500" : "bg-red-500 hover:bg-red-600"}
-            disabled:opacity-50 transition-all z-10`}
+          className={`p-2 rounded-full absolute top-4 right-4 ${
+            isDeleting ? "bg-gray-500" : "bg-red-500 hover:bg-red-600"
+          } transition-colors`}
           title="Delete video"
+          type="button"
         >
-          <FaTrash className={`w-5 h-5 ${isDeleting ? "animate-pulse" : ""}`} />
+          <FaTrash
+            className={`w-5 h-5 text-white ${
+              isDeleting ? "animate-pulse" : ""
+            }`}
+          />
         </button>
       )}
 
@@ -176,20 +198,53 @@ export function VideoCard({
         ref={videoRef}
         onClick={togglePlay}
         onLoadedData={handleLoadedData}
-        preload="auto"
-      />
+        preload="metadata"
+        poster={`${url}?thumb=1`} // Add a poster image if available
+        style={{
+          willChange: "transform",
+          transform: "translateZ(0)",
+        }}
+      >
+        <source src={url} type="video/mp4" />
+      </video>
 
+      {/* Bottom overlay with user info and interactions */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+        <div className="flex items-center justify-between">
+          {/* <div className="flex items-center space-x-3 mb-5"> */}
+          <Link
+            href={`/main/profile/${creator.id}`}
+            className="flex items-center space-x-3 mb-5 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src={creator.avatar}
+              alt={creator.username}
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <p className="text-white font-bold">{creator.username}</p>
+              <p className="text-white text-sm">{caption}</p>
+            </div>
 
-      <VideoInteractions
-        videoId={id}
-        initialLikes={likes}
-        initialComments={comments}
-        onCommentClick={() => setShowComments(true)}
-      />
+            {/* <FollowButton
+              targetUserId={creator.id}
+              targetClerkId={creator.clerkId}
+              initialIsFollowing={false}
+              onFollowUpdate={(isFollowing) => onFollowUpdate?.(creator.id, isFollowing)}
+            /> */}
+          </Link>
 
-      {showComments && (
-        <CommentsSection videoId={id} onClose={() => setShowComments(false)} />
-      )}
+          {/* Right side interactions */}
+          <div className="flex flex-col items-center">
+            <VideoInteractions
+              videoId={id}
+              initialLikes={likes}
+              initialComments={comments}
+              onCommentClick={() => setShowComments(true)}
+            />
+          </div>
+        </div>
+      </div>
 
       {!isPlaying && isLoaded && (
         <div
@@ -202,19 +257,13 @@ export function VideoCard({
         </div>
       )}
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-        <div className="flex flex-col gap-2 items-start">
-          <div className="flex flex-row gap-2 items-center">
-            <img
-              src={creator.avatar}
-              alt={creator.username}
-              className="w-10 h-10 rounded-full"
-            />
-            <p className="text-white font-bold">{creator.username}</p>
-          </div>
-          <p className="text-white text-sm px-2">{caption}</p>
-        </div>
-      </div>
+      {showComments && (
+        <CommentsSection
+          videoId={id}
+          onClose={() => setShowComments(false)}
+          onCommentAdded={handleCommentAdded}
+        />
+      )}
     </div>
   );
 }

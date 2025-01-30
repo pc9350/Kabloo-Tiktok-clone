@@ -4,22 +4,22 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    console.log("POST /api/videos - Start");
+    // console.log("POST /api/videos - Start");
     
     const { userId } = await auth();
-    console.log("User ID:", userId);
+    // console.log("User ID:", userId);
     
     if (!userId) {
       return new Response('Unauthorized', { status: 401 });
     }
 
     const { url, caption } = await req.json();
-    console.log("Request data:", { url, caption });
+    // console.log("Request data:", { url, caption });
 
     const user = await prisma.user.findUnique({
       where: { clerkId: userId },
     });
-    console.log("Found user:", user);
+    // console.log("Found user:", user);
 
     if (!user) {
       return new Response('User not found', { status: 404 });
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         creatorId: user.id,
       },
     });
-    console.log("Created video:", video);
+    // console.log("Created video:", video);
 
     return NextResponse.json(video);
   } catch (error) {

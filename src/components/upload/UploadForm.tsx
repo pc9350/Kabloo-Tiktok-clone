@@ -11,6 +11,34 @@ export default function UploadForm() {
   const [isCompressing, setIsCompressing] = useState(false);
   const router = useRouter();
 
+  const handleUpload = async (res: any) => {
+    if (!caption.trim()) {
+      setError("Caption is required");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/videos/[videoId]", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: res[0].url,
+          caption: caption.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload video");
+      }
+
+      router.push("/main/feed");
+      router.refresh();
+    } catch (error) {
+      setError("Failed to upload video");
+      console.error("Error:", error);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 max-w-xl">
       <h1 className="text-2xl font-bold mb-6 text-center">Upload Video</h1>
@@ -32,6 +60,9 @@ export default function UploadForm() {
           onChange={(e) => setCaption(e.target.value)}
           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           placeholder="Write something about your video..."
+          required
+          minLength={1}
+          maxLength={100}
         />
       </div>
 
@@ -46,6 +77,10 @@ export default function UploadForm() {
               allowedContent: "Videos up to 30 seconds, max 64MB",
             }}
             onBeforeUploadBegin={async (files) => {
+              if (!caption.trim()) {
+                setError("Please add a caption before uploading");
+                throw new Error("Caption required");
+              }
               try {
                 const file = files[0];
 
@@ -78,32 +113,7 @@ export default function UploadForm() {
                 throw error;
               }
             }}
-            onClientUploadComplete={async (res) => {
-              if (res && res[0]) {
-                try{ 
-                const response = await fetch("/api/videos/[videoId]", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    url: res[0].url,
-                    caption,
-                  }),
-                });
-            
-                  if (!response.ok) {
-                    throw new Error("Failed to upload video");
-                  }
-
-                  setTimeout(() => {
-                    router.push("/main/feed");
-                    router.refresh();
-                  }, 1000);
-                } catch (error) {
-                  setError("Failed to upload video");
-                  console.error("Error:", error);
-                }
-              }
-            }}
+            onClientUploadComplete={handleUpload}
             onUploadError={(error: Error) => {
               setError(`Upload failed: ${error.message}`);
             }}
