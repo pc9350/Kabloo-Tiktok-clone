@@ -84,16 +84,69 @@ export async function getRecommendedVideos(
     creator: VideoCreator;
     _count: VideoCount;
   }
+  const currentUser = await prisma.user.findUnique({
+    where: { clerkId: userId },
+  });
 
-  const followingVideos: VideoWithCreatorAndCount[] =
-    await prisma.video.findMany({
-      where: { creatorId: { in: following.map((f: Follow) => f.followingId) } },
-      include: {
-        creator: true,
-        _count: { select: { likes: true, comments: true } },
+  const videos = await prisma.video.findMany({
+    include: {
+      creator: {
+        include: {
+          followers: {
+            where: {
+              followerId: currentUser?.id,
+            },
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
-    });
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  interface VideoWithFollowers extends VideoWithCreatorAndCount {
+    creator: {
+      followers: { followerId: string }[];
+      id: string;
+      clerkId: string;
+      username: string;
+      avatar: string;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+  }
+
+  interface ProcessedVideoWithFollowers {
+    id: string;
+    creator: {
+      id: string;
+      clerkId: string;
+      username: string;
+      avatar: string;
+      createdAt: Date;
+      updatedAt: Date;
+      isFollowing: boolean;
+    };
+    _count: VideoCount;
+  }
+
+  const videosWithFollowStatus: ProcessedVideoWithFollowers[] = videos.map(
+    (video: VideoWithFollowers) => ({
+      ...video,
+      creator: {
+        ...video.creator,
+        isFollowing: video.creator.followers.length > 0,
+        followers: undefined,
+      },
+    })
+  );
 
   interface RestVideo {
     id: string;
@@ -107,7 +160,9 @@ export async function getRecommendedVideos(
         notIn: [
           ...userVideos.map((v: VideoWithCreator) => v.id),
           ...similarCaptionVideos.map((v: VideoWithCreator) => v.id),
-          ...followingVideos.map((v: VideoWithCreatorAndCount) => v.id),
+          ...videosWithFollowStatus.map(
+            (v: ProcessedVideoWithFollowers) => v.id
+          ),
         ],
       },
     },
@@ -131,7 +186,7 @@ export async function getRecommendedVideos(
       [
         ...userVideos,
         ...similarCaptionVideos,
-        ...followingVideos,
+        ...videosWithFollowStatus,
         ...restVideos,
       ].map((video): [string, ProcessedVideo] => [
         video.id,
