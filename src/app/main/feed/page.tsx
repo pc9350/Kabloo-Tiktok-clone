@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { VideoFeed } from "@/components/video/VideoFeed";
-import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getRecommendedVideos } from "@/app/api/recommendations/route";
+import { Suspense } from "react";
 
 export default async function FeedPage() {
   const { userId } = await auth();
@@ -17,55 +18,8 @@ export default async function FeedPage() {
 
   if (!currentUser) redirect("/");
 
-  // const follows = await prisma.follow.findMany({
-  //   where: {
-  //     followerId: currentUser?.id
-  //   }
-  // });
-
-  // console.log("Current follows:", follows); // Debug log
-  // console.log("Current user ID:", currentUser?.id);
-
-  // const followingIds = follows.map((f) => f.followingId);
-  // console.log("Following IDs:", followingIds);
-
-  const videos = await prisma.video.findMany({
-    include: {
-      creator: {
-        include: {
-          followers: {
-            where: {
-              followerId: currentUser?.id
-            }
-          }
-        }
-      },
-      _count: {
-        select: {
-          likes: true,
-          comments: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  console.log('Debug - First video:', {
-    creatorId: videos[0]?.creator.id,
-    followers: videos[0]?.creator.followers,
-    currentUserId: currentUser?.id
-  });
-
-  const videosWithFollowStatus = videos.map(video => ({
-    ...video,
-    creator: {
-      ...video.creator,
-      isFollowing: video.creator.followers.length > 0,
-      followers: undefined
-    }
-  }));
+  // Fetch recommended videos
+  const recommendedVideos = await getRecommendedVideos(currentUser.id);
 
   return (
     <main className="h-screen w-full bg-black">
@@ -76,7 +30,7 @@ export default async function FeedPage() {
           </div>
         }
       >
-        <VideoFeed initialVideos={videosWithFollowStatus} />
+        <VideoFeed initialVideos={recommendedVideos} />
       </Suspense>
     </main>
   );
